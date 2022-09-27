@@ -4,43 +4,51 @@ import "./index.css";
 
 function Square(props) {
   return (
-    <button className="square" onClick={props.onClick}>
+    <button
+      className="square"
+      onClick={props.onClick}
+      style={{ backgroundColor: props.bgColor ? "palegreen" : "" }}
+    >
       {props.value}
     </button>
   );
 }
 
-class Board extends React.Component {
-  renderSquare(i) {
-    return (
-      <Square
-        value={this.props.squares[i]}
-        onClick={() => this.props.onClick(i)}
-      />
-    );
+function Board(props) {
+  function renderSquares(start) {
+    const elem = [];
+    for (let i = start; i < start + 3; i++) {
+      elem.push(
+        <Square
+          key={i}
+          value={props.squares[i]}
+          onClick={() => props.onClick(i)}
+          bgColor={
+            i === props.bgColor[i - start] &&
+            props.squares[i] === props.squares[props.bgColor[i - start]]
+          }
+        />
+      );
+    }
+    return elem;
   }
 
-  render() {
-    return (
-      <div>
-        <div className="board-row">
-          {this.renderSquare(0)}
-          {this.renderSquare(1)}
-          {this.renderSquare(2)}
+  function renderBoard() {
+    const elems = [];
+    let pos;
+    for (let i = 0; i < 3; i++) {
+      pos = i !== 0 ? i * 3 : i;
+      elems.push(
+        <div className="board-row" key={i}>
+          {renderSquares(pos)}
         </div>
-        <div className="board-row">
-          {this.renderSquare(3)}
-          {this.renderSquare(4)}
-          {this.renderSquare(5)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(6)}
-          {this.renderSquare(7)}
-          {this.renderSquare(8)}
-        </div>
-      </div>
-    );
+      );
+    }
+
+    return elems;
   }
+
+  return <div>{renderBoard()}</div>;
 }
 
 class Game extends React.Component {
@@ -51,6 +59,7 @@ class Game extends React.Component {
       history: [{ squares: Array(9).fill(null) }],
       stepNumber: 0,
       xIsNext: true,
+      isDesc: false,
     };
   }
 
@@ -58,7 +67,7 @@ class Game extends React.Component {
     const history = this.state.history.slice(0, this.state.stepNumber + 1);
     const current = history.at(-1);
     const squares = current.squares.slice();
-    if (calculateWinner(squares) || squares[i]) {
+    if (calculateWinner(squares).length > 0 || squares[i]) {
       return;
     }
     squares[i] = this.state.xIsNext ? "X" : "O";
@@ -71,6 +80,10 @@ class Game extends React.Component {
 
   jumpTo(step) {
     this.setState({ stepNumber: step, xIsNext: step % 2 === 0 });
+  }
+
+  handleSortClick() {
+    this.setState({ isDesc: !this.state.isDesc });
   }
 
   render() {
@@ -89,8 +102,14 @@ class Game extends React.Component {
 
     let status;
 
-    if (winner) {
-      status = `Winner: ${winner}`;
+    if (this.state.isDesc) {
+      sortMovesDesc(moves);
+    }
+
+    if (winner.length) {
+      status = `Winner: ${current.squares[winner[0]]}`;
+    } else if (checkNull(current.squares)) {
+      status = `Draw: Nobody wins`;
     } else {
       status = `Next player: ${this.state.xIsNext ? "X" : "O"}`;
     }
@@ -100,11 +119,17 @@ class Game extends React.Component {
           <Board
             squares={current.squares}
             onClick={(i) => this.handleClick(i)}
+            bgColor={winner}
           />
         </div>
         <div className="game-info">
           <div>{status}</div>
           <ol>{moves}</ol>
+          <p>
+            <button onClick={() => this.handleSortClick()}>
+              Sort in {this.state.isDesc ? "Ascending" : "Descending"} Order
+            </button>
+          </p>
         </div>
       </div>
     );
@@ -130,8 +155,30 @@ function calculateWinner(squares) {
   for (let i = 0; i < lines.length; i++) {
     const [a, b, c] = lines[i];
     if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
+      return lines[i];
     }
   }
-  return null;
+  return [];
+}
+
+function checkNull(squares) {
+  for (let i = 0; i < squares.length; i++) {
+    if (squares[i] === null) return false;
+  }
+
+  return true;
+}
+
+function sortMovesDesc(moves) {
+  return moves.sort((a, b) => {
+    if (b.key < a.key) {
+      return -1;
+    }
+
+    if (b.key > a.key) {
+      return 1;
+    }
+
+    return 0;
+  });
 }
