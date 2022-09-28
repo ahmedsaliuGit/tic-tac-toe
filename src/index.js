@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import Clock from "./components/Clock";
 import "./index.css";
 
 function Square(props) {
@@ -23,10 +24,7 @@ function Board(props) {
           key={i}
           value={props.squares[i]}
           onClick={() => props.onClick(i)}
-          bgColor={
-            i === props.bgColor[i - start] &&
-            props.squares[i] === props.squares[props.bgColor[i - start]]
-          }
+          bgColor={props.bgColor.includes(i)}
         />
       );
     }
@@ -40,7 +38,7 @@ function Board(props) {
       pos = i !== 0 ? i * 3 : i;
       elems.push(
         <div className="board-row" key={i}>
-          {renderSquares(pos)}
+          {renderSquares(pos, i)}
         </div>
       );
     }
@@ -64,6 +62,17 @@ class Game extends React.Component {
   }
 
   handleClick(i) {
+    const locations = [
+      [1, 1],
+      [2, 1],
+      [3, 1],
+      [1, 2],
+      [2, 2],
+      [3, 2],
+      [1, 3],
+      [2, 3],
+      [3, 3],
+    ];
     const history = this.state.history.slice(0, this.state.stepNumber + 1);
     const current = history.at(-1);
     const squares = current.squares.slice();
@@ -72,7 +81,7 @@ class Game extends React.Component {
     }
     squares[i] = this.state.xIsNext ? "X" : "O";
     this.setState({
-      history: history.concat([{ squares }]),
+      history: history.concat([{ squares, location: locations[i] }]),
       stepNumber: history.length,
       xIsNext: !this.state.xIsNext,
     });
@@ -91,11 +100,15 @@ class Game extends React.Component {
     const current = history[this.state.stepNumber];
     const winner = calculateWinner(current.squares);
     const moves = history.map((step, move) => {
-      const desc = move ? `Go to move #${move}` : "Go to game start";
+      const desc = move
+        ? `Go to move #${move} @ Col:${history[move].location[0]}, Row:${history[move].location[1]}`
+        : "Go to game start";
 
       return (
         <li key={move}>
-          <button onClick={() => this.jumpTo(move)}>{desc}</button>
+          <button onClick={() => this.jumpTo(move)}>
+            {move === this.state.stepNumber ? <b>{desc}</b> : desc}
+          </button>
         </li>
       );
     });
@@ -114,24 +127,29 @@ class Game extends React.Component {
       status = `Next player: ${this.state.xIsNext ? "X" : "O"}`;
     }
     return (
-      <div className="game">
-        <div className="game-board">
-          <Board
-            squares={current.squares}
-            onClick={(i) => this.handleClick(i)}
-            bgColor={winner}
-          />
+      <React.Fragment>
+        <div className="game">
+          <div className="game-board">
+            <Board
+              squares={current.squares}
+              onClick={(i) => this.handleClick(i)}
+              bgColor={winner}
+            />
+          </div>
+          <div className="game-info">
+            <div>{status}</div>
+            <ol>{moves}</ol>
+            <p>
+              <button onClick={() => this.handleSortClick()}>
+                Sort in {this.state.isDesc ? "Ascending" : "Descending"} Order
+              </button>
+            </p>
+          </div>
         </div>
-        <div className="game-info">
-          <div>{status}</div>
-          <ol>{moves}</ol>
-          <p>
-            <button onClick={() => this.handleSortClick()}>
-              Sort in {this.state.isDesc ? "Ascending" : "Descending"} Order
-            </button>
-          </p>
+        <div>
+          <Clock />
         </div>
-      </div>
+      </React.Fragment>
     );
   }
 }
